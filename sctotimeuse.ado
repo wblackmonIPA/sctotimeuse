@@ -1,11 +1,12 @@
 /* 
 Graph enumerator productivity using question-level timestamps captured using SurveyCTO's text_audit feature 
+
 Author: William Blackmon, wblackmon@poverty-action.org
 */
 
 cap program drop sctotimeuse
 program sctotimeuse
-	syntax [if] [in], media(string) enumerator(varname) outcome(varname) save(string) [starttime(varname)]
+	syntax [if] [in], media(string) enumerator(varname) outcome(varname) [save(string) starttime(varname) text_audit(varname)]
 
 	quietly {
 	* confirm necessary commands are installed
@@ -29,10 +30,14 @@ program sctotimeuse
 	if "`if'" != "" keep `if'
 	if "`in'" != "" keep `in'
 
-	* rename starttime variable if needed
+	* rename starttime and text_audit variables if needed
 	if "`starttime'" != "" {
 		cap drop starttime
 		ren `starttime' starttime
+	}
+	if "`text_audit'" != "" {
+		cap drop text_audit
+		ren `text_audit' text_audit
 	}
 
 	* prep text audit data 
@@ -116,5 +121,5 @@ program sctotimeuse
 	* re-open original dataset
 	use `originaldata', clear
 	grstyle clear 
-	
+
 end
