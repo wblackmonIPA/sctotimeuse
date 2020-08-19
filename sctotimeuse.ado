@@ -6,9 +6,12 @@ Author: William Blackmon, wblackmon@poverty-action.org
 
 cap program drop sctotimeuse
 program sctotimeuse
-	syntax [if] [in], media(string) enumerator(varname) outcome(varname) [save(string) starttime(varname) text_audit(varname)]
-
+	syntax [if] [in], media(string) enumerator(varname) outcome(varname) [save(string) starttime(varname) text_audit(varname) type(string)]
 	quietly {
+	
+	* set default type 
+	if "`type'" == "" loc type "pdf"
+	
 	* confirm necessary commands are installed
 	foreach c in grstyle {
 		qui cap which `c'
@@ -112,7 +115,7 @@ program sctotimeuse
 		twoway `grtext', title("`thisdate'") xtitle("") ytitle("") ///
 			xlabel(`xmin'(1)`xmax', valuelabels) ylabel(1(1)`enummax', valuelabels) ///
 			legend(order(`legtext'))
-		if "`save'" != "" graph export "`save'/timeuse_`thisdatenum'.pdf", replace
+		if "`save'" != "" graph export "`save'/timeuse_`thisdatenum'.`type'", replace
 		graph close
 		restore
 	}
