@@ -104,7 +104,7 @@ program sctotimeuse
 		levelsof outcome, loc(outs)
 		foreach out of local outs { // loop over survey outcomes 
 			loc ++i
-			loc grtext = `"`grtext' (scatter enum time if outcome=="`out'", msize(vsmall))"'
+			loc grtext = `"`grtext' (line enum time if outcome=="`out'", msize(vsmall))"'
 			loc legtext = `"`legtext' `i' "`out'""'
 		}
 		twoway `grtext', title("`thisdate'") xtitle("") ytitle("") ///
