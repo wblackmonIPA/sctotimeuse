@@ -9,8 +9,14 @@ program sctotimeuse
 	syntax [if] [in], media(string) enumerator(varname) outcome(varname) [save(string) starttime(varname) key(varname) type(string)]
 	quietly {
 	
+	* preserve a copy of current dataset
+	preserve
+
 	* set default type 
 	if "`type'" == "" loc type "pdf"
+
+	* set default starttime 
+	if "`starttime'" == "" loc starttime "starttime"
 	
 	* confirm necessary commands are installed
 	foreach c in grstyle {
@@ -21,23 +27,18 @@ program sctotimeuse
 		}
 	}
 
-	// set graph style
+	* initialize temporary files
+	tempfile preserve1
+	tempfile preserve2
+
+	* set graph style
 	grstyle init
 	grstyle set plain, horizontal compact
 
-	* save a copy of the current dataset
-	tempfile originaldata
-	save `originaldata'
 
 	* keep according to if/in
 	if "`if'" != "" keep `if'
 	if "`in'" != "" keep `in'
-
-	* rename starttime and text_audit variables if needed
-	if "`starttime'" != "" {
-		cap drop starttime
-		ren `starttime' starttime
-	}
 
 	* prep text audit data 
 	tempfile full 
@@ -48,10 +49,10 @@ program sctotimeuse
 	forvalues n = 1/`=_N' {
 		if mod(`n',50)==0 n di "   - `n' of `=_N' complete"
 		loc thiskey = subinstr(key[`n'], "uuid:", "", 1)
-		loc thisstart = starttime[`n']
+		loc thisstart = `starttime'[`n']
 		loc thisenum = `enumerator'[`n']
 		loc thisoutcome = `outcome'[`n']
-		preserve
+		save `preserve1', replace
 		cap import delimited "`media'/TA_`thiskey'", clear
 		if _rc == 0 {
 			loc ++counter
@@ -62,7 +63,7 @@ program sctotimeuse
 			if `counter'>1 append using `full', force
 			save `full', replace
 		}
-		restore
+		use `preserve1', clear
 	}
 	loc failed = `totobs' - `counter'
 	if `failed' > 0 n di "Note `failed' observations do not match with text audit data."
@@ -93,7 +94,7 @@ program sctotimeuse
 	loc xmax = ceil(r(max))	
 	levelsof date, loc(dates)
 	foreach d of local dates { // loop over survey dates creating a separate graph for each
-		preserve
+		save `preserve2', replace
 		keep if date==`d'
 		loc thisdate : di %tdDayname,_Month_dd,_YYYY `d'
 		loc thisdatenum : di %tdYYYYNNDD `d'
@@ -110,13 +111,14 @@ program sctotimeuse
 			xlabel(`xmin'(1)`xmax', valuelabels) ylabel(1(1)`enummax', valuelabels) ///
 			legend(order(`legtext'))
 		if "`save'" != "" graph export "`save'/timeuse_`thisdatenum'.`type'", replace
+		pause
 		graph close
-		restore
+		use `preserve2', clear
 	}
 	} // end quietly
 
 	* re-open original dataset
-	use `originaldata', clear
 	grstyle clear 
+	restore
 
 end
