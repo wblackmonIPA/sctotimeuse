@@ -6,7 +6,7 @@ Author: William Blackmon, wblackmon@poverty-action.org
 
 cap program drop sctotimeuse
 program sctotimeuse
-	syntax [if] [in], media(string) enumerator(varname) outcome(varname) [save(string) starttime(varname) text_audit(varname) type(string)]
+	syntax [if] [in], media(string) enumerator(varname) outcome(varname) [save(string) starttime(varname) key(varname) type(string)]
 	quietly {
 	
 	* set default type 
@@ -38,26 +38,21 @@ program sctotimeuse
 		cap drop starttime
 		ren `starttime' starttime
 	}
-	if "`text_audit'" != "" {
-		cap drop text_audit
-		ren `text_audit' text_audit
-	}
 
 	* prep text audit data 
 	tempfile full 
 	n di "Preparing text audit data..."
 	count
 	loc totobs = `r(N)'
-	drop if mi(text_audit)
 	loc counter = 0
 	forvalues n = 1/`=_N' {
 		if mod(`n',50)==0 n di "   - `n' of `=_N' complete"
-		loc file = subinstr(subinstr(text_audit[`n'], "media\", "", 1), "File skipped from exports: ", "", 1)
+		loc thiskey = subinstr(key[`n'], "uuid:", "", 1)
 		loc thisstart = starttime[`n']
 		loc thisenum = `enumerator'[`n']
 		loc thisoutcome = `outcome'[`n']
 		preserve
-		cap import delimited "`media'/`file'", clear
+		cap import delimited "`media'/TA_`thiskey'", clear
 		if _rc == 0 {
 			loc ++counter
 			gen start = `thisstart'
@@ -74,7 +69,6 @@ program sctotimeuse
 
 	* prep data for graphing
 	use `full', clear
-	pause
 	gen double first = start + firstappeared*1000
 	format first start %tc
 	cap decode enum, gen(e)
