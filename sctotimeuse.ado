@@ -40,6 +40,11 @@ program sctotimeuse
 	if "`if'" != "" keep `if'
 	if "`in'" != "" keep `in'
 
+	* clean up enumerator name variable
+	tempvar enum
+	cap decode `enumerator', gen(`enum') // in case enumerator variable is encoded
+	if _rc>0 gen `enum' = `enumerator'
+
 	* prep text audit data 
 	tempfile full 
 	n di "Preparing text audit data..."
@@ -50,7 +55,7 @@ program sctotimeuse
 		if mod(`n',50)==0 n di "   - `n' of `=_N' complete"
 		loc thiskey = subinstr(key[`n'], "uuid:", "", 1)
 		loc thisstart = `starttime'[`n']
-		loc thisenum = `enumerator'[`n']
+		loc thisenum = `enum'[`n']
 		loc thisoutcome = `outcome'[`n']
 		save `preserve1', replace
 		cap import delimited "`media'/TA_`thiskey'", clear
@@ -70,16 +75,9 @@ program sctotimeuse
 
 	* prep data for graphing
 	use `full', clear
+	encode enum, gen(enum_enc)
 	gen double first = start + firstappeared*1000
 	format first start %tc
-	cap decode enum, gen(e)
-	if _rc==0 {
-		drop enum
-		ren e enum
-	}
-	encode enum, gen(e)
-	drop enum
-	ren e enum
 	gen date = dofc(start)
 	gen time = hh(first) + mm(first)/60 + ss(first)/60/60
 	lab def hours 0 "12AM" 1 "1AM" 2 "2AM" 3 "3AM" 4 "4AM" 5 "5AM" 6 "6AM" 7 "7AM" 8 "8AM" 9 "9AM" 10 "10AM" 11 "11AM" ///
@@ -87,7 +85,7 @@ program sctotimeuse
 	lab val time hours
 
 	// graph
-	sum enum
+	sum enum_enc
 	loc enummax = r(max)
 	sum time
 	loc xmin = floor(r(min))
@@ -104,7 +102,7 @@ program sctotimeuse
 		levelsof outcome, loc(outs)
 		foreach out of local outs { // loop over survey outcomes 
 			loc ++i
-			loc grtext = `"`grtext' (line enum time if outcome=="`out'", msize(vsmall))"'
+			loc grtext = `"`grtext' (scatter enum_enc time if outcome=="`out'", msize(vsmall))"'
 			loc legtext = `"`legtext' `i' "`out'""'
 		}
 		twoway `grtext', title("`thisdate'") xtitle("") ytitle("") ///
